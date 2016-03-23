@@ -1,0 +1,81 @@
+---
+- hosts: vagrants
+  sudo: true
+  user: vagrant
+  tasks:
+  # libselinux-python
+  - name: install libselinux-python
+    yum: name=libselinux-python state=installed
+  # Apache
+  - name: install httpd
+    yum: name=httpd state=installed
+  - name: httpd start
+    service: name=httpd state=started enabled=yes
+  - name: edit httpd.conf add Options ExecCGI
+    lineinfile: >
+      dest=/etc/httpd/conf/httpd.conf
+      regexp='Options Indexes FollowSymLinks'
+      line='Options Indexes FollowSymLinks ExecCGI'
+  - name: edit httpd.conf enable AddHandler
+    lineinfile: >
+      dest=/etc/httpd/conf/httpd.conf
+      regexp=' #AddHandler cgi-script .cgi'
+      line='AddHandler cgi-script .cgi'
+  # Perl
+  - name: install perl
+    yum: name=perl state=installed
+  - name: install perl-CGI
+    yum: name=perl-CGI state=installed
+  #MySQL
+  - name: install mysql-server MySQL-python
+    yum: name={{item}} state=installed
+    with_items:
+      - mysql-server
+      - MySQL-python
+  - name: edit my.cnf character-set-server=utf8
+    ini_file: >
+      dest=/etc/my.cnf
+      section=mysqld
+      option=character-set-server
+      value=utf8
+  - name: edit my.cnf default-character-set=utf8
+    ini_file: >
+      dest=/etc/my.cnf
+      section=mysql
+      option=default-character-set
+      value=utf8
+  - name: create database
+    mysql_db: name=databasename state=present encoding=utf8
+  - name: create database user
+    mysql_user: name=username password=password priv=*.*:ALL state=present
+  - name: mysqld restart
+    service: name=mysqld state=restarted enabled=yes
+  #PHP
+  - name: install php php-mbstring php-mysql
+    yum: name={{item}} state=installed
+    with_items:
+      - php
+      - php-mbstring
+      - php-mysql
+  #phpMyAdmin
+  - name: install EPEL repository
+    yum: name=http://ftp.riken.jp/Linux/fedora/epel/6/i386/epel-release-6-8.noarch.rpm state=present
+  - name: install phpmyadmin
+    yum: name=phpmyadmin enablerepo=epel state=installed
+  - name: edit phpMyAdmin.conf Allow
+    replace: >
+      dest=/etc/httpd/conf.d/phpMyAdmin.conf
+      regexp=" Deny from All"
+      replace=" #Deny from All"
+  - name: httpd restarted
+    service: name=httpd state=restarted enabled=yes
+  #Perl module
+  #Movable Type
+  - name: dir permission
+    command: chmod 777 {{item}}
+    with_items:
+      - "/var/www/html"
+      - "/var/www/html/mt"
+      - "/var/www/html/mt/mt-static/support"
+  - name: chmod 755 /var/www/html/mt/*.cgi
+    shell: chmod 755 /var/www/html/mt/*.cgi
