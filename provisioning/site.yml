@@ -21,6 +21,7 @@
       dest=/etc/httpd/conf/httpd.conf
       regexp=' #AddHandler cgi-script .cgi'
       line='AddHandler cgi-script .cgi'
+      backrefs=no
   # Perl
   - name: install perl
     yum: name=perl state=installed
@@ -44,12 +45,12 @@
       section=mysql
       option=default-character-set
       value=utf8
+  - name: mysqld restart
+    service: name=mysqld state=restarted enabled=yes
   - name: create database
     mysql_db: name=databasename state=present encoding=utf8
   - name: create database user
     mysql_user: name=username password=password priv=*.*:ALL state=present
-  - name: mysqld restart
-    service: name=mysqld state=restarted enabled=yes
   #PHP
   - name: install php php-mbstring php-mysql
     yum: name={{item}} state=installed
@@ -67,11 +68,52 @@
       dest=/etc/httpd/conf.d/phpMyAdmin.conf
       regexp=" Deny from All"
       replace=" #Deny from All"
+  - name: edit php.ini memory_limit
+    ini_file: >
+      dest=/etc/php.ini
+      section=PHP
+      option=memory_limit
+      value=256M
+  - name: edit php.ini post_max_size
+    ini_file: >
+      dest=/etc/php.ini
+      section=PHP
+      option=post_max_size
+      value=256M
+  - name: edit php.ini upload_max_filesize
+    ini_file: >
+      dest=/etc/php.ini
+      section=PHP
+      option=upload_max_filesize
+      value=256M
   - name: httpd restarted
     service: name=httpd state=restarted enabled=yes
   #Perl module
+  - name: yum group-install (Perl module)
+    yum: name={{item}} state=installed
+    with_items:
+      - perl-Image-Size
+      - perl-Net-SSLeay
+      - perl-IPC-Run
+      - perl-Archive-Zip
+      - perl-Authen-SASL
+      - perl-CGI-Emulate-PSGI
+      - perl-Cache-Memcached
+      - perl-Digest-SHA
+      - perl-Crypt-SSLeay
+      - perl-GD
+      - perl-Archive-Tar
+      - ImageMagick
+      - perl-HTML-Parser
+      - perl-Crypt-DSA
+      - perl-XML-Parser
+      - perl-IO-Socket-SSL
+      - perl-Digest-SHA1
+      - perl-Time-HiRes
+      - perl-YAML-Syck
+      - perl-XML-SAX
   #Movable Type
-  - name: dir permission
+  - name: chmod 777 /var/www/html
     command: chmod 777 {{item}}
     with_items:
       - "/var/www/html"
